@@ -9,8 +9,8 @@ pragma solidity ^0.4.0;
 
 contract BirthdayGift {
 
-    uint giftAllBalance = 0;
-    uint numOfWallets = 0;
+    uint private giftAllBalance = 0;
+    uint private numOfWallets = 0;
 
     struct Birthdayee {
         // fix int
@@ -19,74 +19,76 @@ contract BirthdayGift {
         uint balance;
         // Used to see if address has been initialized
         bool isInitialized;
-        // used to limit the withdrawls from address - once
-        bool hasTakenPayment;
     }
     
     // All participants
-    mapping (address => Birthdayee) birthdayPool;
-    
-    // function to control counts of pool members
-    function isNewAddress(address birthdayeeAddress) private returns(bool) {
-        // Has this been initialized
-        if ( birthdayPool[birthdayeeAddress].isInitialized ) {
-            return true;
-        }
-        
-        return false;
-    }
+    mapping (address => Birthdayee) private birthdayPool;
     
     // If the wallet hasn't been initialized, then do so and increment counter
-    function walletDoorCheck(address birthdayeeAddress) private {
+    modifier walletCheck(address birthdayeeAddress) {
         if ( isNewAddress(birthdayeeAddress) ) {
             birthdayPool[birthdayeeAddress].isInitialized = true;
             numOfWallets++;
         }
+        _;
     }
     
-    function getGiftBalance(address birthdayeeAddress) private returns(uint) {
-        uint payout = birthdayPool[birthdayeeAddress].balance;
-        if (birthdayPool[birthdayeeAddress].hasTakenPayment != true){
-             uint birthdayeePoolBalance = this.balance / numOfWallets;
-             payout += birthdayeePoolBalance;
-        }
+    function isItTheirBirthday(address birthdayeeAddress) private pure returns(bool) {
+        // TODO : for now, return true - need to work on dates
+        return true;
+    }
 
-        return payout;
+    // function to control counts of poolf members
+    function isNewAddress(address birthdayeeAddress) private view returns(bool) {
+        // Has the wallet been initialized?
+        if ( birthdayPool[birthdayeeAddress].isInitialized ) {
+            return true;
+        }
+        return false;
     }
     
-    function resetBalance(address birthdayeeAddress) private {
-        birthdayPool[birthdayeeAddress].balance = 0;
-        birthdayPool[birthdayeeAddress].hasTakenPayment = false;
-    }
-    
-    // Give to birthday pool because nice people do exist
-    function giveAll(uint giftAmount) public payable {
-        giftAllBalance += giftAmount;
+    function getGiftBalance(address walletAddress) private view returns(uint payout) {
+        payout = birthdayPool[walletAddress].balance;
+        payout += this.balance / numOfWallets;
     }
     
     // Give to a specific wallet
-    function giveTo(uint giftAmount, address birthdayeeAddress) public payable {
-        walletDoorCheck(birthdayeeAddress);
-        birthdayPool[birthdayeeAddress].balance += giftAmount;
+    function giveTo(address birthdayeeAddress) public payable walletCheck(msg.sender) {
+        birthdayPool[birthdayeeAddress].balance += msg.value;
+    }
+    
+    // Give to birthday pool because nice people do exist
+    function giveAll() public payable {
+        giftAllBalance += msg.value;
     }
     
     // View Birthdayee balance assigned and from pool
-    function viewMyGift(address birthdayeeAddress) public returns (uint) {
-        walletDoorCheck (birthdayeeAddress);
-
-        return getGiftBalance(birthdayeeAddress);
+    function viewMyGift() public view returns (uint balance) {
+        balance = getGiftBalance(msg.sender);
+    }
+    
+    // View Pool balance
+    function viewPoolBalance() public view returns (uint balance) {
+        balance = giftAllBalance;
     }
     
     // Collect birthday gift if within two weeks of birthday
-    function collectMyGift(address birthdayeeAddress) public {
-        walletDoorCheck(birthdayeeAddress);
-        uint payout = getGiftBalance(birthdayeeAddress);
-        birthdayeeAddress.transfer(payout);
-        require (payout != 0);
-        if ( birthdayPool[birthdayeeAddress].hasTakenPayment != true ) {
+    function collectMyGift() public walletCheck(msg.sender) returns (uint payout) {
+        payout = getGiftBalance(msg.sender);
+        require (payout > 0);
+        if ( isItTheirBirthday(msg.sender) ) {
+            birthdayPool[msg.sender].balance = 0;
             giftAllBalance -= payout;
+            msg.sender.transfer(payout);
+        } else {
+            payout = 0;
         }
+    }
+    
+    // Anon function for paying to the pool
+    function () public payable {
+        giveAll();
     }
 
 
-}
+}   
