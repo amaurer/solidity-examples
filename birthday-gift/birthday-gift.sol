@@ -29,25 +29,28 @@ contract BirthdayGift {
     // function to control counts of pool members
     function isNewAddress(address birthdayeeAddress) private returns(bool) {
         // Has this been initialized
-        if ( birthdayPool[birthdayeeAddress].isInitialized )
+        if ( birthdayPool[birthdayeeAddress].isInitialized ) {
             return true;
+        }
         
         return false;
     }
     
     // If the wallet hasn't been initialized, then do so and increment counter
     function walletDoorCheck(address birthdayeeAddress) private {
-        if ( isNewAddress(birthdayeeAddress) )
+        if ( isNewAddress(birthdayeeAddress) ) {
             birthdayPool[birthdayeeAddress].isInitialized = true;
             numOfWallets++;
-            
+        }
     }
     
     function getGiftBalance(address birthdayeeAddress) private returns(uint) {
         uint payout = birthdayPool[birthdayeeAddress].balance;
-        if (birthdayPool[birthdayeeAddress].hasTakenPayment != true)
+        if (birthdayPool[birthdayeeAddress].hasTakenPayment != true){
              uint birthdayeePoolBalance = this.balance / numOfWallets;
              payout += birthdayeePoolBalance;
+        }
+
         return payout;
     }
     
@@ -70,6 +73,7 @@ contract BirthdayGift {
     // View Birthdayee balance assigned and from pool
     function viewMyGift(address birthdayeeAddress) public returns (uint) {
         walletDoorCheck (birthdayeeAddress);
+
         return getGiftBalance(birthdayeeAddress);
     }
     
@@ -79,10 +83,10 @@ contract BirthdayGift {
         uint payout = getGiftBalance(birthdayeeAddress);
         birthdayeeAddress.transfer(payout);
         require (payout != 0);
-        if ( birthdayPool[birthdayeeAddress].hasTakenPayment != true )
+        if ( birthdayPool[birthdayeeAddress].hasTakenPayment != true ) {
             giftAllBalance -= payout;
+        }
     }
-    
 
 
 }
